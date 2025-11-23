@@ -2,123 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, Users, Activity, Menu, X } from 'lucide-react'
-
-// Mock data за класовете
-const classes = [
-  {
-    id: 1,
-    day: 'Понеделник',
-    time: '09:00',
-    title: 'Morning Flow',
-    instructor: 'Мария Петрова',
-    spotsTotal: 12,
-    spotsBooked: 10,
-    intensity: 'Low' as const,
-  },
-  {
-    id: 2,
-    day: 'Понеделник',
-    time: '18:00',
-    title: 'Power Reformer',
-    instructor: 'Иван Димитров',
-    spotsTotal: 10,
-    spotsBooked: 8,
-    intensity: 'High' as const,
-  },
-  {
-    id: 3,
-    day: 'Вторник',
-    time: '10:30',
-    title: 'Gentle Stretch',
-    instructor: 'Анна Георгиева',
-    spotsTotal: 12,
-    spotsBooked: 12,
-    intensity: 'Low' as const,
-  },
-  {
-    id: 4,
-    day: 'Вторник',
-    time: '19:00',
-    title: 'Intermediate Reformer',
-    instructor: 'Петър Стоянов',
-    spotsTotal: 10,
-    spotsBooked: 9,
-    intensity: 'Medium' as const,
-  },
-  {
-    id: 5,
-    day: 'Сряда',
-    time: '08:00',
-    title: 'Sunrise Pilates',
-    instructor: 'Мария Петрова',
-    spotsTotal: 12,
-    spotsBooked: 11,
-    intensity: 'Low' as const,
-  },
-  {
-    id: 6,
-    day: 'Сряда',
-    time: '17:30',
-    title: 'Advanced Flow',
-    instructor: 'Иван Димитров',
-    spotsTotal: 8,
-    spotsBooked: 6,
-    intensity: 'High' as const,
-  },
-  {
-    id: 7,
-    day: 'Четвъртък',
-    time: '11:00',
-    title: 'Restorative Reformer',
-    instructor: 'Анна Георгиева',
-    spotsTotal: 12,
-    spotsBooked: 5,
-    intensity: 'Low' as const,
-  },
-  {
-    id: 8,
-    day: 'Четвъртък',
-    time: '18:30',
-    title: 'Evening Balance',
-    instructor: 'Петър Стоянов',
-    spotsTotal: 10,
-    spotsBooked: 10,
-    intensity: 'Medium' as const,
-  },
-  {
-    id: 9,
-    day: 'Петък',
-    time: '09:30',
-    title: 'Weekend Prep',
-    instructor: 'Мария Петрова',
-    spotsTotal: 12,
-    spotsBooked: 4,
-    intensity: 'Medium' as const,
-  },
-  {
-    id: 10,
-    day: 'Събота',
-    time: '10:00',
-    title: 'Saturday Strength',
-    instructor: 'Иван Димитров',
-    spotsTotal: 10,
-    spotsBooked: 8,
-    intensity: 'High' as const,
-  },
-]
-
-// Групиране на класовете по дни
-const groupClassesByDay = () => {
-  const grouped: { [key: string]: typeof classes } = {}
-  classes.forEach((cls) => {
-    if (!grouped[cls.day]) {
-      grouped[cls.day] = []
-    }
-    grouped[cls.day].push(cls)
-  })
-  return grouped
-}
+import { Calendar, Clock, Users, Activity, Menu, X, Settings } from 'lucide-react'
+import Link from 'next/link'
+import { loadClasses, groupClassesByDay, type Class } from '@/lib/utils'
 
 // Navbar компонент
 function Navbar() {
@@ -156,6 +42,13 @@ function Navbar() {
             <a href="#about" className="text-deep-espresso hover:text-sage-green transition-colors">
               За нас
             </a>
+            <Link
+              href="/admin"
+              className="text-deep-espresso hover:text-sage-green transition-colors flex items-center space-x-1"
+            >
+              <Settings size={18} />
+              <span>Админ</span>
+            </Link>
             <button className="bg-sage-green text-white px-6 py-2.5 rounded-2xl font-medium hover:bg-sage-green/90 transition-all shadow-sm">
               Book Now
             </button>
@@ -179,6 +72,13 @@ function Navbar() {
             <a href="#about" className="block text-deep-espresso hover:text-sage-green">
               За нас
             </a>
+            <Link
+              href="/admin"
+              className="block text-deep-espresso hover:text-sage-green flex items-center space-x-2"
+            >
+              <Settings size={18} />
+              <span>Админ</span>
+            </Link>
             <button className="w-full bg-sage-green text-white px-6 py-2.5 rounded-2xl font-medium">
               Book Now
             </button>
@@ -218,7 +118,7 @@ function Hero() {
 }
 
 // Class Card компонент
-function ClassCard({ cls }: { cls: typeof classes[0] }) {
+function ClassCard({ cls }: { cls: Class }) {
   const spotsAvailable = cls.spotsTotal - cls.spotsBooked
   const isWaitlist = spotsAvailable === 0
   const isUrgent = spotsAvailable <= 2 && spotsAvailable > 0
@@ -288,8 +188,36 @@ function ClassCard({ cls }: { cls: typeof classes[0] }) {
 
 // Schedule секция
 function Schedule() {
-  const groupedClasses = groupClassesByDay()
+  const [classes, setClasses] = useState<Class[]>([])
+  const [groupedClasses, setGroupedClasses] = useState<{ [key: string]: Class[] }>({})
   const dayOrder = ['Понеделник', 'Вторник', 'Сряда', 'Четвъртък', 'Петък', 'Събота', 'Неделя']
+
+  useEffect(() => {
+    const updateClasses = () => {
+      const loadedClasses = loadClasses()
+      setClasses(loadedClasses)
+      setGroupedClasses(groupClassesByDay(loadedClasses))
+    }
+    
+    updateClasses()
+    
+    // Слушане за промени в localStorage
+    const handleStorageChange = () => {
+      updateClasses()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Проверка за промени всеки секунда (за същия таб)
+    const interval = setInterval(() => {
+      updateClasses()
+    }, 1000)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
+  }, [])
 
   return (
     <section id="schedule" className="py-20 px-4 sm:px-6 lg:px-8">
@@ -308,31 +236,38 @@ function Schedule() {
           </p>
         </motion.div>
 
-        <div className="space-y-12">
-          {dayOrder.map((day) => {
-            if (!groupedClasses[day]) return null
+        {classes.length === 0 ? (
+          <div className="text-center py-12">
+            <Calendar className="mx-auto text-stone-400 mb-4" size={48} />
+            <p className="text-stone-600 text-lg">Няма налични класове</p>
+          </div>
+        ) : (
+          <div className="space-y-12">
+            {dayOrder.map((day) => {
+              if (!groupedClasses[day] || groupedClasses[day].length === 0) return null
 
-            return (
-              <motion.div
-                key={day}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4 }}
-              >
-                <div className="flex items-center mb-6">
-                  <Calendar className="text-sage-green mr-3" size={24} />
-                  <h3 className="text-2xl font-semibold text-deep-espresso">{day}</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {groupedClasses[day].map((cls) => (
-                    <ClassCard key={cls.id} cls={cls} />
-                  ))}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+              return (
+                <motion.div
+                  key={day}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <div className="flex items-center mb-6">
+                    <Calendar className="text-sage-green mr-3" size={24} />
+                    <h3 className="text-2xl font-semibold text-deep-espresso">{day}</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groupedClasses[day].map((cls) => (
+                      <ClassCard key={cls.id} cls={cls} />
+                    ))}
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </section>
   )
